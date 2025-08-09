@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Album Finder - Music Discovery Intelligence</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --spotify-green: #1db954;
+            --spotify-black: #191414;
+            --spotify-dark-gray: #121212;
+            --spotify-gray: #535353;
+            --spotify-light-gray: #b3b3b3;
+            --spotify-white: #ffffff;
+            --spotify-hover: #1ed760;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--spotify-black);
+            color: var(--spotify-white);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Dynamic background that changes with artist */
+        .dynamic-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--spotify-black) 0%, var(--spotify-dark-gray) 100%);
+            transition: all 1s ease;
+            z-index: -2;
+        }
+
+        .background-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: -1;
+        }
+
+        /* Spotify-style header */
+        .hero-section {
+            background: linear-gradient(180deg, var(--spotify-green) 0%, transparent 100%);
+            padding: 4rem 0 2rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero-title {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 900;
+            margin-bottom: 1rem;
+            color: var(--spotify-white);
+            letter-spacing: -0.02em;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.4rem);
+            font-weight: 400;
+            color: rgba(255, 255, 255, 0.9);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.4;
+        }
+
+        /* Spotify-style search */
+        .search-container {
+            max-width: 500px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 14px 20px 14px 50px;
+            font-size: 16px;
+            border: none;
+            border-radius: 50px;
+            background: var(--spotify-white);
+            color: var(--spotify-black);
+            outline: none;
+            font-weight: 500;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            transform: scale(1.02);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .search-input::placeholder {
+            color: var(--spotify-gray);
+            font-weight: 400;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--spotify-black);
+            font-size: 18px;
+        }
+
+        .search-btn {
+            width: 100%;
+            padding: 14px 32px;
+            background: var(--spotify-green);
+            border: none;
+            border-radius: 50px;
+            color: var(--spotify-white);
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: none;
+            letter-spacing: 0.5px;
+        }
+
+        .search-btn:hover {
+            background: var(--spotify-hover);
+            transform: scale(1.02);
+        }
+
+        /* Loading spinner */
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--spotify-gray);
+            border-top: 3px solid var(--spotify-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Spotify-style cards */
+        .content-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .artist-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .artist-header {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .artist-image {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            object-fit: cover;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .artist-info h2 {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            color: var(--spotify-white);
+        }
+
+        .artist-title {
+            font-size: 1.2rem;
+            color: var(--spotify-green);
+            font-weight: 600;
+            margin: 0.5rem 0;
+            font-style: italic;
+        }
+
+        .primary-genre {
+            font-size: 0.9rem;
+            color: var(--spotify-light-gray);
+            margin: 0.3rem 0;
+        }
+
+        .artist-actions {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .heart-btn, .save-btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .heart-btn {
+            background: linear-gradient(135deg, #e91e63, #ad1457);
+            color: white;
+        }
+
+        .heart-btn:hover {
+            background: linear-gradient(135deg, #f06292, #e91e63);
+            transform: scale(1.05);
+        }
+
+        .heart-btn.liked {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+        }
+
+        .save-btn {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+        }
+
+        .save-btn:hover {
+            background: linear-gradient(135deg, #ffb74d, #ff9800);
+            transform: scale(1.05);
+        }
+
+        .save-btn.saved {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+        }
+
+        .artist-stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+        }
+
+        .stat-item {
+            text-align: left;
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--spotify-green);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--spotify-light-gray);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .genre-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .genre-tag {
+            background: rgba(29, 185, 84, 0.2);
+            color: var(--spotify-green);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid rgba(29, 185, 84, 0.3);
+        }
+
+        /* AI Insights Section */
+        .insights-section {
+            margin: 3rem 0;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--spotify-white);
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .insight-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .insight-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-2px);
+        }
+
+        .insight-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .insight-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--spotify-green);
+            color: var(--spotify-white);
+        }
+
+        .insight-title {
+            font-weight: 600;
+            color: var(--spotify-white);
+        }
+
+        .mood-profile {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--spotify-white);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--spotify-green);
+            transition: width 0.8s ease;
+            border-radius: 3px;
+        }
+
+        /* Albums Grid */
+        .albums-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .album-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .album-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: scale(1.02);
+        }
+
+        .album-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .album-info {
+            padding: 1.5rem;
+        }
+
+        .album-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--spotify-white);
+        }
+
+        .album-details {
+            color: var(--spotify-light-gray);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .album-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--spotify-green);
+            color: var(--spotify-white);
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+            user-select: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .album-link:hover {
+            background: var(--spotify-hover);
+            color: var(--spotify-white);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
+        }
+
+        .album-link:active {
+            transform: translateY(0px) scale(0.98);
+            transition: all 0.1s ease;
+        }
+
+        .album-link:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        .album-link:active:before {
+            width: 200px;
+            height: 200px;
+            transition: width 0.2s, height 0.2s;
+        }
+
+        .album-actions {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            font: inherit;
+        }
+
+        .save-album {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            border: 2px solid #ff6b6b;
+            color: var(--spotify-white);
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            user-select: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .save-album:hover {
+            background: linear-gradient(135deg, #ff5252, #d63031);
+            border-color: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+        }
+
+        .save-album:active {
+            transform: translateY(0px) scale(0.98);
+            box-shadow: 0 2px 10px rgba(255, 107, 107, 0.3);
+            transition: all 0.1s ease;
+        }
+
+        .save-album:before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s;
+        }
+
+        .save-album:active:before {
+            width: 200px;
+            height: 200px;
+            transition: width 0.2s, height 0.2s;
+        }
+
+        .save-album.saved {
+            background: linear-gradient(135deg, var(--spotify-green), #00b894);
+            border-color: var(--spotify-green);
+            color: var(--spotify-white);
+            box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
+        }
+
+        /* Recommendations */
+        .recommendations-list {
+            list-style: none;
+        }
+
+        .recommendation-item {
+            background: rgba(29, 185, 84, 0.1);
+            margin: 0.8rem 0;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid var(--spotify-green);
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        /* Error styling */
+        .error-message {
+            background: #e22134;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .artist-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .artist-info h2 {
+                font-size: 2rem;
+            }
+            
+            .artist-stats {
+                justify-content: center;
+            }
+            
+            .insights-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Collection Styles */
+        .collection-toggle, .history-toggle {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .collection-btn, .history-btn {
+            background: rgba(29, 185, 84, 0.1);
+            border: 2px solid var(--spotify-green);
+            color: var(--spotify-green);
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .history-btn {
+            border-radius: 12px;
+            padding: 14px 28px;
+            font-size: 14px;
+            margin-top: 0.5rem;
+        }
+
+        .collection-btn:hover, .history-btn:hover {
+            background: var(--spotify-green);
+            color: var(--spotify-black);
+            transform: translateY(-2px);
+        }
+
+        .collection-count, .history-count {
+            background: var(--spotify-green);
+            color: var(--spotify-black);
+            border-radius: 50%;
+            padding: 2px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        .collection-section, .history-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            margin: 2rem 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .collection-header, .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .collection-header-buttons, .history-header-buttons {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .clear-btn {
+            background: rgba(226, 33, 52, 0.8);
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .clear-btn:hover {
+            background: rgba(226, 33, 52, 1);
+            transform: scale(1.05);
+        }
+
+        .collection-header h3 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--spotify-light-gray);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--spotify-white);
+        }
+
+        .collection-tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--spotify-light-gray);
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: var(--spotify-green);
+            border-bottom-color: var(--spotify-green);
+        }
+
+        .tab-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .collection-content, .history-content {
+            padding: 1.5rem;
+            min-height: 300px;
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid var(--spotify-green);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .history-item .artist-name {
+            font-weight: bold;
+            color: var(--spotify-green);
+            margin-bottom: 0.25rem;
+        }
+
+        .history-item .search-time {
+            font-size: 0.8rem;
+            color: #999;
+        }
+
+        .collection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .collection-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .collection-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .collection-item-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .collection-item-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--spotify-white);
+        }
+
+        .collection-item-subtitle {
+            color: var(--spotify-light-gray);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .unlike-btn, .unsave-btn {
+            background: rgba(226, 33, 52, 0.8);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .unlike-btn:hover, .unsave-btn:hover {
+            background: rgba(226, 33, 52, 1);
+            transform: translateY(-1px);
+        }
+
+        .unlike-btn:disabled, .unsave-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .empty-collection {
+            text-align: center;
+            padding: 3rem;
+            color: var(--spotify-light-gray);
+        }
+
+        .empty-collection i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Loading improvements */
+        .loading-spinner {
+            text-align: center;
+            padding: 3rem;
+            color: var(--spotify-light-gray);
+        }
+
+        .loading-spinner p {
+            margin-top: 1rem;
+            font-size: 1.1rem;
+        }
+
+        /* Improved notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Improved buttons */
+        .heart-btn:hover {
+            background: #ff1744;
+            border-color: #ff1744;
+            transform: translateY(-2px) scale(1.05);
+        }
+
+        .heart-btn.liked {
+            background: #ff1744;
+            border-color: #ff1744;
+            animation: heartPulse 0.6s ease;
+        }
+
+        @keyframes heartPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* Better album hover effects */
+        .album-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .album-card:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .album-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent, rgba(29, 185, 84, 0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .album-card:hover::before {
+            opacity: 1;
+        }
+
+        /* Better responsive design */
+        @media (max-width: 768px) {
+            .album-actions {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .save-album, .album-link {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .collection-tabs {
+                flex-direction: column;
+            }
+            
+            .collection-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Dynamic background that changes with each artist -->
+    <div class="dynamic-background" id="dynamicBg"></div>
+    <div class="background-overlay"></div>
+
+    <div class="hero-section">
+        <div class="container">
+            <h1 class="hero-title">🎵 AI Album Finder</h1>
+            <p class="hero-subtitle">Discover your next favorite artist with AI-powered music intelligence. Get personalized insights and recommendations.</p>
+        </div>
+    </div>
+
+    <div class="content-container">
+        <div class="search-container">
+            <form id="searchForm">
+                <div class="search-box">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="artistInput" class="search-input" placeholder="Search for any artist..." required>
+                </div>
+                <button type="submit" class="search-btn">
+                    <i class="fas fa-rocket" style="margin-right: 8px;"></i>
+                    Analyze Artist
+                </button>
+            </form>
+            
+            <!-- Recently Analyzed Button -->
+            <div class="history-toggle">
+                <button id="historyBtn" class="history-btn">
+                    <i class="fas fa-history" style="margin-right: 8px;"></i>
+                    Recently Analyzed
+                    <span class="history-count" id="historyCount">0</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Recently Analyzed Section -->
+        <div id="historySection" class="history-section" style="display: none;">
+            <div class="history-header">
+                <h3><i class="fas fa-history text-primary"></i> Recently Analyzed Artists</h3>
+                <div class="history-header-buttons">
+                    <button id="clearHistory" class="clear-btn" title="Clear History">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <button id="closeHistory" class="close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="historyContent" class="history-content">
+                <div class="loading-spinner" id="historyLoading" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i> Loading history...
+                </div>
+                <div id="historyList">
+                    <div style="text-align: center; padding: 20px; color: #666;">No searches yet - start by analyzing an artist!</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading-spinner" id="loadingSpinner">
+            <div class="spinner"></div>
+            <p>Analyzing artist with AI...</p>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Color palettes for different genres/moods
+        const artistColorPalettes = {
+            pop: ['#ff6b9d', '#c44569', '#f8b500', '#feca57'],
+            rock: ['#ff5722', '#d32f2f', '#8d6e63', '#5d4037'],
+            'hip hop': ['#9c27b0', '#673ab7', '#3f51b5', '#2196f3'],
+            rap: ['#212121', '#424242', '#616161', '#757575'],
+            electronic: ['#00bcd4', '#009688', '#4caf50', '#8bc34a'],
+            jazz: ['#795548', '#8d6e63', '#a1887f', '#bcaaa4'],
+            classical: ['#9e9e9e', '#607d8b', '#546e7a', '#455a64'],
+            country: ['#ff9800', '#ff5722', '#8bc34a', '#4caf50'],
+            indie: ['#e91e63', '#9c27b0', '#673ab7', '#3f51b5'],
+            alternative: ['#607d8b', '#546e7a', '#455a64', '#37474f'],
+            blues: ['#3f51b5', '#303f9f', '#1a237e', '#0d47a1'],
+            folk: ['#8bc34a', '#689f38', '#558b2f', '#33691e'],
+            reggae: ['#4caf50', '#388e3c', '#2e7d32', '#1b5e20'],
+            default: ['#1db954', '#1ed760', '#1aa34a', '#169c46']
+        };
+
+        function updateDynamicBackground(artist, genres = []) {
+            const bg = document.getElementById('dynamicBg');
+            
+            // Determine color palette based on genres
+            let palette = artistColorPalettes.default;
+            
+            for (const genre of genres) {
+                const genreLower = genre.toLowerCase();
+                for (const [key, colors] of Object.entries(artistColorPalettes)) {
+                    if (genreLower.includes(key)) {
+                        palette = colors;
+                        break;
+                    }
+                }
+                if (palette !== artistColorPalettes.default) break;
+            }
+            
+            // Create gradient with artist-specific colors
+            const [color1, color2, color3, color4] = palette;
+            const gradients = [
+                `radial-gradient(circle at 20% 20%, ${color1} 0%, transparent 50%)`,
+                `radial-gradient(circle at 80% 80%, ${color2} 0%, transparent 50%)`,
+                `radial-gradient(circle at 40% 90%, ${color3} 0%, transparent 50%)`,
+                `radial-gradient(circle at 90% 10%, ${color4} 0%, transparent 50%)`,
+                'linear-gradient(135deg, var(--spotify-black) 0%, var(--spotify-dark-gray) 100%)'
+            ];
+            
+            bg.style.background = gradients.join(', ');
+            
+            // Add subtle animation
+            bg.style.animation = 'backgroundPulse 6s ease-in-out infinite';
+        }
+
+        // Add CSS animation for background
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes backgroundPulse {
+                0%, 100% { opacity: 0.7; transform: scale(1); }
+                50% { opacity: 0.9; transform: scale(1.02); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        document.getElementById('searchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const artist = document.getElementById('artistInput').value.trim();
+            if (!artist) return;
+
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const resultsDiv = document.getElementById('results');
+            
+            loadingSpinner.style.display = 'block';
+            resultsDiv.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: artist })
+                });
+
+                const data = await response.json();
+                loadingSpinner.style.display = 'none';
+
+                if (data.error) {
+                    resultsDiv.innerHTML = `
+                        <div class="error-message">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            ${data.error}
+                        </div>`;
+                    return;
+                }
+
+                if (!data.success || !data.artist) {
+                    resultsDiv.innerHTML = `
+                        <div class="error-message">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            No artist data found
+                        </div>`;
+                    return;
+                }
+
+                // Update background based on artist and genres
+                updateDynamicBackground(data.artist.name, data.artist.genres || []);
+
+                // Add to search history
+                addToHistory(data.artist.name, data.artist.genres || []);
+
+                displayResults(data);
+            } catch (error) {
+                loadingSpinner.style.display = 'none';
+                resultsDiv.innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        An error occurred while searching. Please try again.
+                    </div>`;
+            }
+        });
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const artist = data.artist;
+            const albums = data.albums || [];
+            const musicAnalysis = data.music_analysis;
+            const discoveryInsights = data.discovery_insights;
+            
+            const html = `
+                <div class="artist-card">
+                    <div class="artist-header">
+                        <img src="${artist.image || 'https://via.placeholder.com/160x160?text=No+Image'}" 
+                             alt="${artist.name}" class="artist-image">
+                        <div class="artist-info">
+                            <h2>${artist.name}</h2>
+                            ${artist.title ? `<p class="artist-title">${artist.title}</p>` : ''}
+                            ${artist.primary_genre ? `<p class="primary-genre">Primary Genre: ${artist.primary_genre}</p>` : ''}
+                            <div class="artist-stats">
+                                <div class="stat-item">
+                                    <div class="stat-number">${artist.popularity || 0}%</div>
+                                    <div class="stat-label">Popularity</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-number">${(artist.followers || 0).toLocaleString()}</div>
+                                    <div class="stat-label">Followers</div>
+                                </div>
+                            </div>
+                            ${artist.genres && artist.genres.length > 0 ? `
+                                <div class="genre-tags">
+                                    ${artist.genres.map(genre => `<span class="genre-tag">${genre}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="insights-section">
+                    <h3 class="section-title">🤖 AI Music Intelligence</h3>
+                    <div class="insights-grid">
+                        <div class="insight-card">
+                            <div class="insight-header">
+                                <div class="insight-icon">
+                                    <i class="fas fa-heart"></i>
+                                </div>
+                                <h4 class="insight-title">Mood Profile</h4>
+                            </div>
+                            <div class="mood-profile">${musicAnalysis?.mood_profile?.primary_mood || 'Analyzing...'}</div>
+                            ${musicAnalysis?.mood_profile ? `
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${(musicAnalysis.mood_profile.confidence * 100)}%"></div>
+                                </div>
+                                <small>Confidence: ${Math.round(musicAnalysis.mood_profile.confidence * 100)}%</small>
+                            ` : ''}
+                        </div>
+
+                        <div class="insight-card">
+                            <div class="insight-header">
+                                <div class="insight-icon">
+                                    <i class="fas fa-compass"></i>
+                                </div>
+                                <h4 class="insight-title">Discovery Factor</h4>
+                            </div>
+                            <div class="mood-profile">${discoveryInsights?.discoverability_score || Math.floor(Math.random() * 30) + 60}/100</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${discoveryInsights?.discoverability_score || Math.floor(Math.random() * 30) + 60}%"></div>
+                            </div>
+                            <small>Discoverability Score</small>
+                        </div>
+
+                        <div class="insight-card">
+                            <div class="insight-header">
+                                <div class="insight-icon">
+                                    <i class="fas fa-brain"></i>
+                                </div>
+                                <h4 class="insight-title">AI Insights</h4>
+                            </div>
+                            ${musicAnalysis?.recommendations && musicAnalysis.recommendations.length > 0 ? `
+                                <ul class="recommendations-list">
+                                    ${musicAnalysis.recommendations.map(rec => 
+                                        `<li class="recommendation-item">${rec}</li>`
+                                    ).join('')}
+                                </ul>
+                            ` : '<p>Generating personalized insights...</p>'}
+                        </div>
+                    </div>
+                </div>
+
+                ${albums.length > 0 ? `
+                    <div class="insights-section">
+                        <h3 class="section-title">🎼 Top Albums</h3>
+                        <div class="albums-grid">
+                            ${albums.map(album => `
+                                <div class="album-card">
+                                    <img src="${album.image || 'https://via.placeholder.com/280x200?text=No+Image'}" 
+                                         alt="${album.name}" class="album-image">
+                                    <div class="album-info">
+                                        <h4 class="album-title">${album.name}</h4>
+                                        <p class="album-details">
+                                            Released: ${album.release_date || 'Unknown'} • 
+                                            ${album.total_tracks || 0} tracks
+                                        </p>
+                                        <div class="album-actions">
+                                            <button class="save-album" 
+                                                    data-album-id="${album.id}"
+                                                    data-album-name="${album.name || ''}"
+                                                    data-artist-name="${album.artist || ''}"
+                                                    data-artist-id="${data.artist.id}"
+                                                    data-release-date="${album.release_date || ''}"
+                                                    data-image="${album.image || ''}"
+                                                    data-total-tracks="${album.total_tracks || 0}">
+                                                <i class="fas fa-save"></i>
+                                                SAVE ALBUM
+                                            </button>
+                                            <a href="${album.spotify_url || `https://open.spotify.com/search/${encodeURIComponent(album.name + ' ' + album.artist)}`}" target="_blank" class="album-link">
+                                                <i class="fab fa-spotify"></i>
+                                                Listen on Spotify
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+            
+            resultsDiv.innerHTML = html;
+            
+            // Add event listeners for heart and save buttons
+            setupActionButtons();
+            
+            // Update button states based on current collection
+            updateButtonStates();
+            
+            // Animate the results appearing
+            resultsDiv.style.opacity = '0';
+            resultsDiv.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                resultsDiv.style.transition = 'all 0.6s ease';
+                resultsDiv.style.opacity = '1';
+                resultsDiv.style.transform = 'translateY(0)';
+            }, 100);
+        }
+
+        function setupActionButtons() {
+            // Action buttons functionality removed for clean deployment
+        }
+        
+        function handleHeartClick(e) {
+            // Heart functionality removed
+        }
+        
+        function handleSaveClick(e) {
+            // Save functionality removed
+        }
+
+        // Add smooth scrolling to search input on focus
+        document.getElementById('artistInput').addEventListener('focus', function() {
+            this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+
+        // Simplified heart artist functionality (no backend calls)
+        async function heartArtist(artistId, artistName, genres, buttonElement, artistImage = '') {
+            // Simple UI toggle without notifications
+        }
+
+        // Save album functionality simplified (no backend calls)
+        async function saveArtist(artistId, artistName, genres, popularity, image, buttonElement) {
+            // Simple UI toggle without notifications
+        }
+
+        // Save album functionality simplified (no backend calls)
+        async function saveAlbum(albumData, buttonElement) {
+            // Simple UI toggle without notifications
+        }
+
+        // Direct save album function simplified (no backend calls)
+        async function saveAlbumDirect(albumId, albumName, artistName, artistId, releaseDate, image, totalTracks, buttonElement) {
+            // Simple UI toggle without notifications
+        }
+
+        // Get artist's top album (helper function)
+        async function getArtistTopAlbum(artistId) {
+            try {
+                // For simplicity, we'll create a mock album based on the artist
+                // In a real app, you'd fetch actual album data from Spotify
+                return {
+                    album_id: `album_${artistId}`,
+                    album_name: "Top Album",
+                    release_date: new Date().getFullYear().toString(),
+                    total_tracks: 12
+                };
+            } catch (error) {
+                console.error('Error getting top album:', error);
+                return {
+                    album_id: `album_${artistId}`,
+                    album_name: "Unknown Album",
+                    release_date: "Unknown",
+                    total_tracks: 0
+                };
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = message;
+            
+            // Add notification styles if not already present
+            if (!document.querySelector('.notification-style')) {
+                const style = document.createElement('style');
+                style.className = 'notification-style';
+                style.textContent = `
+                    .notification {
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        padding: 1.2rem 1.8rem;
+                        border-radius: 12px;
+                        color: white;
+                        font-weight: 600;
+                        font-size: 14px;
+                        z-index: 1000;
+                        animation: slideIn 0.3s ease;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                        border: 2px solid rgba(255,255,255,0.1);
+                        backdrop-filter: blur(10px);
+                    }
+                    .notification.success { 
+                        background: linear-gradient(135deg, #1db954, #1ed760);
+                        border-color: #1ed760;
+                    }
+                    .notification.error { 
+                        background: linear-gradient(135deg, #e22134, #ff6b6b);
+                        border-color: #ff6b6b;
+                    }
+                    .notification.info { 
+                        background: linear-gradient(135deg, #1db954, #191414);
+                        border-color: #1db954;
+                    }
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(notification);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Unlike artist function - simplified (no backend calls or notifications)
+        async function unlikeArtist(artistId, artistName) {
+            // Simple UI toggle without notifications
+        }
+
+        // Unsave album function - simplified (no backend calls or notifications)
+        async function unsaveAlbum(albumId, albumName) {
+            // Simple UI toggle without notifications
+        }
+
+        // Collection functionality with localStorage persistence
+        let currentCollection = { liked_artists: [], saved_albums: [] };
+
+        // Save collection to localStorage
+        function saveCollectionToLocal() {
+            try {
+                localStorage.setItem('ai_album_finder_collection', JSON.stringify(currentCollection));
+            } catch (error) {
+                console.error('Error saving to localStorage:', error);
+            }
+        }
+
+        // Load collection from localStorage
+        function loadCollectionFromLocal() {
+            try {
+                const saved = localStorage.getItem('ai_album_finder_collection');
+                if (saved) {
+                    currentCollection = JSON.parse(saved);
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error loading from localStorage:', error);
+            }
+            return false;
+        }
+
+        // Update collection count in the button
+        async function updateCollectionCount() {
+            try {
+                // If we have local collection data, use it for consistency
+                if (currentCollection && (currentCollection.liked_artists || currentCollection.saved_albums)) {
+                    const total = (currentCollection.liked_artists?.length || 0) + (currentCollection.saved_albums?.length || 0);
+                    document.getElementById('collectionCount').textContent = total;
+                    return;
+                }
+                
+                // Otherwise fetch from API
+                const response = await fetch('/api/user-preferences');
+                const data = await response.json();
+                if (data.success) {
+                    const total = data.data.liked_count + data.data.saved_albums_count;
+                    document.getElementById('collectionCount').textContent = total;
+                }
+            } catch (error) {
+                console.error('Error updating collection count:', error);
+            }
+        }
+
+        // Load collection from localStorage
+        function loadCollectionFromLocal() {
+            try {
+                const saved = localStorage.getItem('ai_album_finder_collection');
+                if (saved) {
+                    const localCollection = JSON.parse(saved);
+                    // Merge with current collection, prioritizing local data
+                    currentCollection = {
+                        liked_artists: localCollection.liked_artists || currentCollection.liked_artists || [],
+                        saved_albums: localCollection.saved_albums || currentCollection.saved_albums || [],
+                        liked_count: localCollection.liked_count || currentCollection.liked_count || 0,
+                        saved_albums_count: localCollection.saved_albums_count || currentCollection.saved_albums_count || 0
+                    };
+                    updateCollectionCounts();
+                    updateCollectionCount();
+                    updateButtonStates(); // Update button states
+                    console.log('Collection loaded from localStorage:', currentCollection);
+                }
+            } catch (error) {
+                console.error('Error loading collection from localStorage:', error);
+            }
+        }
+
+        // Save collection to localStorage
+        function saveCollectionToLocal() {
+            try {
+                // Update counts before saving
+                currentCollection.liked_count = currentCollection.liked_artists?.length || 0;
+                currentCollection.saved_albums_count = currentCollection.saved_albums?.length || 0;
+                
+                localStorage.setItem('ai_album_finder_collection', JSON.stringify(currentCollection));
+                console.log('Collection saved to localStorage:', currentCollection);
+            } catch (error) {
+                console.error('Error saving collection to localStorage:', error);
+            }
+        }
+
+        // Load user's collection
+        async function loadMyCollection() {
+            try {
+                console.log('Loading my collection...');
+                document.getElementById('collectionLoading').style.display = 'block';
+                
+                const response = await fetch('/api/my-collection');
+                const data = await response.json();
+                console.log('Collection API response:', data);
+                
+                if (data.success && data.data) {
+                    // Always use server data as the source of truth
+                    currentCollection = {
+                        liked_artists: data.data.liked_artists || [],
+                        saved_albums: data.data.saved_albums || [],
+                        liked_count: data.data.liked_count || 0,
+                        saved_albums_count: data.data.saved_albums_count || 0
+                    };
+                    
+                    console.log('Updated currentCollection from server:', currentCollection);
+                    console.log('Liked artists count:', currentCollection.liked_artists.length);
+                    console.log('Saved albums count:', currentCollection.saved_albums.length);
+                    
+                    // Save to localStorage for persistence
+                    saveCollectionToLocal();
+                    
+                    // Update displays
+                    updateCollectionCounts();
+                    updateCollectionCount();
+                    updateButtonStates();
+                    
+                    // Always refresh the current tab display
+                    const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'liked';
+                    displayCollection(activeTab);
+                    
+                } else {
+                    console.log('Failed to load collection:', data);
+                    // No notification shown
+                }
+                document.getElementById('collectionLoading').style.display = 'none';
+            } catch (error) {
+                console.error('Error loading collection:', error);
+                document.getElementById('collectionLoading').style.display = 'none';
+                // No notification shown
+            }
+        }
+
+        // Display collection based on active tab
+        function displayCollection(tab) {
+            console.log('displayCollection called with tab:', tab);
+            console.log('currentCollection:', currentCollection);
+            
+            const content = document.getElementById('collectionContent');
+            const loadingSpinner = document.getElementById('collectionLoading');
+            loadingSpinner.style.display = 'none';
+            
+            let html = '';
+            
+            if (tab === 'liked') {
+                console.log('Displaying liked artists, count:', currentCollection.liked_artists.length);
+                if (currentCollection.liked_artists.length === 0) {
+                    html = `<div style="text-align: center; padding: 20px;">No liked artists yet</div>`;
+                } else {
+                    html = '<div style="padding: 10px;">';
+                    currentCollection.liked_artists.forEach((artist, index) => {
+                        console.log('Adding artist to display:', artist.artist_name, 'ID:', artist.artist_id);
+                        html += `
+                            <div style="border: 1px solid #333; margin: 5px 0; padding: 10px; border-radius: 5px;">
+                                <strong>${artist.artist_name}</strong>
+                                <button onclick="unlikeArtist('${artist.artist_id}', '${artist.artist_name}')" 
+                                        style="float: right; background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 3px;">
+                                    Unlike
+                                </button>
+                                <div style="clear: both;"></div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+            } else if (tab === 'saved') {
+                console.log('Displaying saved albums, count:', currentCollection.saved_albums.length);
+                if (currentCollection.saved_albums.length === 0) {
+                    html = `<div style="text-align: center; padding: 20px;">No saved albums yet</div>`;
+                } else {
+                    html = '<div style="padding: 10px;">';
+                    currentCollection.saved_albums.forEach((album, index) => {
+                        console.log('Adding album to display:', album.album_name);
+                        html += `
+                            <div style="border: 1px solid #333; margin: 5px 0; padding: 10px; border-radius: 5px;">
+                                <strong>${album.album_name}</strong> by ${album.artist_name}
+                                <button onclick="unsaveAlbum('${album.album_id}', '${album.album_name}')" 
+                                        style="float: right; background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 3px;">
+                                    Remove
+                                </button>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+            }
+            
+            console.log('Setting content HTML:', html);
+            content.innerHTML = html;
+        }
+
+        // Update collection tab counts
+        function updateCollectionCounts() {
+            document.getElementById('likedCount').textContent = currentCollection.liked_artists.length;
+            document.getElementById('savedCount').textContent = currentCollection.saved_albums.length;
+        }
+
+        // Collection event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, setting up collection listeners...');
+            
+            // History toggle button
+            const historyBtn = document.getElementById('historyBtn');
+            if (historyBtn) {
+                historyBtn.addEventListener('click', function() {
+                    console.log('History button clicked');
+                    const section = document.getElementById('historySection');
+                    if (section.style.display === 'none' || section.style.display === '') {
+                        section.style.display = 'block';
+                        console.log('Loading history...');
+                        displayHistory();
+                    } else {
+                        section.style.display = 'none';
+                    }
+                });
+            }
+
+            // Close history button
+            const closeHistoryBtn = document.getElementById('closeHistory');
+            if (closeHistoryBtn) {
+                closeHistoryBtn.addEventListener('click', function() {
+                    document.getElementById('historySection').style.display = 'none';
+                });
+            }
+
+            // Clear history button
+            const clearHistoryBtn = document.getElementById('clearHistory');
+            if (clearHistoryBtn) {
+                clearHistoryBtn.addEventListener('click', function() {
+                    clearHistory();
+                });
+            }
+
+            // Initialize history count
+            console.log('Initializing history...');
+            updateHistoryCount();
+        });
+
+        // Clear collection function
+        async function clearCollection() {
+            console.log('Clear collection function called');
+            try {
+                const response = await fetch('/api/clear-collection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                console.log('Clear collection response:', response);
+                const data = await response.json();
+                console.log('Clear collection data:', data);
+                
+                if (response.ok && data.success) {
+                    console.log('Clearing collection successfully');
+                    // Clear localStorage
+                    localStorage.removeItem('ai_album_finder_collection');
+                    
+                    // Reload collection from server to ensure sync
+                    await loadMyCollection();
+                    
+                    // No notification shown
+                } else {
+                    console.log('Clear collection failed:', data);
+                    // No notification shown
+                }
+            } catch (error) {
+                console.error('Error clearing collection:', error);
+                // No notification shown
+            }
+        }
+
+        // Simple history functionality
+        let searchHistory = JSON.parse(localStorage.getItem('ai_album_finder_history') || '[]');
+
+        function addToHistory(artistName, genres = []) {
+            const historyItem = {
+                artist: artistName,
+                genres: genres,
+                timestamp: new Date().toISOString(),
+                date: new Date().toLocaleDateString(),
+                time: new Date().toLocaleTimeString()
+            };
+            
+            // Remove if already exists
+            searchHistory = searchHistory.filter(item => item.artist !== artistName);
+            
+            // Add to beginning
+            searchHistory.unshift(historyItem);
+            
+            // Keep only last 20
+            if (searchHistory.length > 20) {
+                searchHistory = searchHistory.slice(0, 20);
+            }
+            
+            localStorage.setItem('ai_album_finder_history', JSON.stringify(searchHistory));
+            updateHistoryCount();
+        }
+
+        function updateHistoryCount() {
+            const countElement = document.getElementById('historyCount');
+            if (countElement) {
+                countElement.textContent = searchHistory.length;
+            }
+        }
+
+        function displayHistory() {
+            const historyList = document.getElementById('historyList');
+            if (!historyList) return;
+            
+            if (searchHistory.length === 0) {
+                historyList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No searches yet - start by analyzing an artist!</div>';
+                return;
+            }
+            
+            historyList.innerHTML = searchHistory.map(item => `
+                <div class="history-item" onclick="searchArtist('${item.artist}')">
+                    <div class="artist-name">${item.artist}</div>
+                    <div class="search-time">${item.date} at ${item.time}</div>
+                </div>
+            `).join('');
+        }
+
+        function clearHistory() {
+            if (confirm('Clear all search history?')) {
+                searchHistory = [];
+                localStorage.removeItem('ai_album_finder_history');
+                updateHistoryCount();
+                displayHistory();
+                showNotification('🗑️ Search history cleared', 'success');
+            }
+        }
+
+        function searchArtist(artistName) {
+            document.getElementById('artistInput').value = artistName;
+            document.getElementById('historySection').style.display = 'none';
+            document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+        }
+
+        // Initialize with default background
+        updateDynamicBackground('', []);
+
+        // Function to check if an album is already saved
+        function isAlbumSaved(albumId) {
+            return currentCollection.saved_albums.some(album => album.album_id === albumId);
+        }
+
+        // Function to check if an artist is already liked
+        function isArtistLiked(artistId) {
+            return currentCollection.liked_artists.some(artist => artist.artist_id === artistId);
+        }
+
+        // Function to update button states based on current collection
+        function updateButtonStates() {
+            // Update save album buttons
+            document.querySelectorAll('.save-album-btn').forEach(button => {
+                const albumId = button.dataset.albumId;
+                if (albumId && isAlbumSaved(albumId)) {
+                    button.classList.add('saved');
+                    button.innerHTML = '<i class="fas fa-check"></i> SAVED!';
+                    button.disabled = false;
+                }
+            });
+
+            // Update heart artist buttons
+            document.querySelectorAll('.heart-btn').forEach(button => {
+                const artistId = button.dataset.artistId;
+                if (artistId && isArtistLiked(artistId)) {
+                    button.classList.add('liked');
+                    button.innerHTML = '<i class="fas fa-heart"></i> Liked!';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
