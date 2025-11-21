@@ -246,12 +246,5 @@ This project demonstrates:
 
 Ideal for showcasing capabilities in **full-stack development**, **API integration**, **AI/ML applications**, and **user-centered design**.
 
-## Contact Information
-
-**Developer**: [Your Name]  
-**Focus Areas**: Music technology, AI applications, and software engineering  
-- **Portfolio**: [Your Portfolio URL]
-- **LinkedIn**: [Your LinkedIn Profile]
-- **GitHub**: [Your GitHub Profile]
 
 Available for discussion regarding music technology projects, AI applications, and software engineering opportunities.
